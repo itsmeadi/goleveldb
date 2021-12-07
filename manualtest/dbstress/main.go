@@ -522,7 +522,7 @@ func main() {
 								}
 
 								getStat.start()
-								v2, err := snap.Get(k2, nil)
+								err := snap.Get(k2, nil, value)
 								if err != nil {
 									fatalf(err, "[%02d] READER #%d.%d K%d snap.Get: %v\nk1: %x\n -> k2: %x", ns, snapwi, ri, n, err, k1, k2)
 								}

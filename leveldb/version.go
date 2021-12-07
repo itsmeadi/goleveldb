@@ -138,9 +138,9 @@ func (v *version) walkOverlapping(aux tFiles, ikey internalKey, f func(level int
 	}
 }
 
-func (v *version) get(aux tFiles, ikey internalKey, ro *opt.ReadOptions, noValue bool) (value []byte, tcomp bool, err error) {
+func (v *version) get(aux tFiles, ikey internalKey, ro *opt.ReadOptions, noValue bool, value []byte) (tcomp bool, err error) {
 	if v.closing {
-		return nil, false, ErrClosed
+		return false, ErrClosed
 	}
 
 	ukey := ikey.ukey()
@@ -175,9 +175,9 @@ func (v *version) get(aux tFiles, ikey internalKey, ro *opt.ReadOptions, noValue
 			ferr        error
 		)
 		if noValue {
-			fikey, ferr = v.s.tops.findKey(t, ikey, ro)
+			ferr = v.s.tops.findKey(t, ikey, ro, fikey)
 		} else {
-			fikey, fval, ferr = v.s.tops.find(t, ikey, ro)
+			fikey, ferr = v.s.tops.find(t, ikey, ro, value)
 		}
 
 		switch ferr {

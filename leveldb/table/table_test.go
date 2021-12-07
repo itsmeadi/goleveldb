@@ -24,11 +24,11 @@ type tableWrapper struct {
 }
 
 func (t tableWrapper) TestFind(key []byte) (rkey, rvalue []byte, err error) {
-	return t.Reader.Find(key, false, nil)
+	return t.Reader.Find(key, false, nil, value)
 }
 
 func (t tableWrapper) TestGet(key []byte) (value []byte, err error) {
-	return t.Reader.Get(key, nil)
+	return t.Reader.Get(key, nil, value)
 }
 
 func (t tableWrapper) TestNewIterator(slice *util.Range) iterator.Iterator {

@@ -233,7 +233,7 @@ func (h *dbHarness) assertNumKeys(want int) {
 
 func (h *dbHarness) getr(db Reader, key string, expectFound bool) (found bool, v []byte) {
 	t := h.t
-	v, err := db.Get([]byte(key), h.ro)
+	err := db.Get([]byte(key), h.ro, value)
 	switch err {
 	case ErrNotFound:
 		if expectFound {
@@ -1560,7 +1560,7 @@ func TestDB_ClosedIsClosed(t *testing.T) {
 	}()
 
 	assertErr(t, db.Put([]byte("x"), []byte("y"), h.wo), true)
-	_, err := db.Get([]byte("k"), h.ro)
+	err := db.Get([]byte("k"), h.ro, value)
 	assertErr(t, err, true)
 
 	if iter.Valid() {
@@ -1575,7 +1575,7 @@ func TestDB_ClosedIsClosed(t *testing.T) {
 
 	assertErr(t, iter2.Error(), false)
 
-	_, err = snap.Get([]byte("k"), h.ro)
+	err = snap.Get([]byte("k"), h.ro, value)
 	assertErr(t, err, true)
 
 	_, err = db.GetSnapshot()
@@ -1773,7 +1773,7 @@ func TestDB_Concurrent(t *testing.T) {
 					h.put(kstr, fmt.Sprintf("%d.%d.%-1000d", k, i, x))
 				} else {
 					get++
-					v, err := h.db.Get([]byte(kstr), h.ro)
+					err := h.db.Get([]byte(kstr), h.ro, value)
 					if err == nil {
 						found++
 						rk, ri, rx := 0, -1, uint32(0)
@@ -2092,10 +2092,10 @@ func TestDB_GoleveldbIssue74(t *testing.T) {
 				ptrKey := iter.Key()
 				key := iter.Value()
 
-				if _, err := snap.Get(ptrKey, nil); err != nil {
+				if err := snap.Get(ptrKey, nil, value); err != nil {
 					t.Fatalf("WRITER #%d snapshot.Get %q: %v", i, ptrKey, err)
 				}
-				if value, err := snap.Get(key, nil); err != nil {
+				if err := snap.Get(key, nil, value); err != nil {
 					t.Fatalf("WRITER #%d snapshot.Get %q: %v", i, key, err)
 				} else if string(value) != string(key)+iv {
 					t.Fatalf("WRITER #%d snapshot.Get %q got invalid value, want %q got %q", i, key, string(key)+iv, value)
@@ -2128,11 +2128,11 @@ func TestDB_GoleveldbIssue74(t *testing.T) {
 				ptrKey := iter.Key()
 				key := iter.Value()
 
-				if _, err := snap.Get(ptrKey, nil); err != nil {
+				if err := snap.Get(ptrKey, nil, value); err != nil {
 					t.Fatalf("READER #%d snapshot.Get %q: %v", i, ptrKey, err)
 				}
 
-				if value, err := snap.Get(key, nil); err != nil {
+				if err := snap.Get(key, nil, value); err != nil {
 					t.Fatalf("READER #%d snapshot.Get %q: %v", i, key, err)
 				} else if prevValue != "" && string(value) != string(key)+prevValue {
 					t.Fatalf("READER #%d snapshot.Get %q got invalid value, want %q got %q", i, key, string(key)+prevValue, value)
@@ -2258,7 +2258,7 @@ func TestDB_GoleveldbIssue72and83(t *testing.T) {
 				if writei != kwritei {
 					t.Fatalf("READER0 #%d.%d W#%d invalid write iteration num: %d", i, k, writei, kwritei)
 				}
-				if _, err := snap.Get(k2, nil); err != nil {
+				if err := snap.Get(k2, nil, value); err != nil {
 					t.Fatalf("READER0 #%d.%d W#%d snap.Get: %v\nk1: %x\n -> k2: %x", i, k, writei, err, k1, k2)
 				}
 			}
@@ -2376,7 +2376,7 @@ func TestDB_TransientError(t *testing.T) {
 			vtail := fmt.Sprintf("VAL%030d", i)
 			for _, k := range sk {
 				key := fmt.Sprintf("KEY%8d", k)
-				xvalue, err := snap.Get([]byte(key), nil)
+				err := snap.Get([]byte(key), nil, value)
 				if err != nil {
 					t.Fatalf("READER_GET #%d SEQ=%d K%d error: %v", i, snap.elem.seq, k, err)
 				}
@@ -2493,7 +2493,8 @@ func TestDB_UkeyShouldntHopAcrossTable(t *testing.T) {
 			vtail := fmt.Sprintf("VAL%030d", i)
 			for k := 0; k < nKey; k++ {
 				key := fmt.Sprintf("KEY%08d", k)
-				xvalue, err := snap.Get([]byte(key), nil)
+				xvalue:=make([]byte, 0)
+				err := snap.Get([]byte(key), nil, xvalue)
 				if err != nil {
 					t.Fatalf("READER_GET #%d SEQ=%d K%d error: %v", i, snap.elem.seq, k, err)
 				}
@@ -2892,7 +2893,7 @@ func TestDB_GracefulClose(t *testing.T) {
 			}()
 			closing = true
 		}
-		if _, err := h.db.Get([]byte(fmt.Sprintf("%09d", i)), h.ro); err != nil {
+		if err := h.db.Get([]byte(fmt.Sprintf("%09d", i)), h.ro, value); err != nil {
 			t.Logf("Get error: %s (expected)", err)
 			break
 		}

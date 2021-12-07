@@ -817,7 +817,7 @@ func (r *Reader) NewIterator(slice *util.Range, ro *opt.ReadOptions) iterator.It
 	return iterator.NewIndexedIterator(index, opt.GetStrict(r.o, ro, opt.StrictReader))
 }
 
-func (r *Reader) find(key []byte, filtered bool, ro *opt.ReadOptions, noValue bool) (rkey, value []byte, err error) {
+func (r *Reader) find(key []byte, filtered bool, ro *opt.ReadOptions, noValue bool, value []byte) (rkey []byte, err error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -845,7 +845,7 @@ func (r *Reader) find(key []byte, filtered bool, ro *opt.ReadOptions, noValue bo
 	dataBH, n := decodeBlockHandle(index.Value())
 	if n == 0 {
 		r.err = r.newErrCorruptedBH(r.indexBH, "bad data block handle")
-		return nil, nil, r.err
+		return nil, r.err
 	}
 
 	// The filter should only used for exact match.
@@ -854,11 +854,11 @@ func (r *Reader) find(key []byte, filtered bool, ro *opt.ReadOptions, noValue bo
 		if ferr == nil {
 			if !filterBlock.contains(r.filter, dataBH.offset, key) {
 				frel.Release()
-				return nil, nil, ErrNotFound
+				return nil, ErrNotFound
 			}
 			frel.Release()
 		} else if !errors.IsCorrupted(ferr) {
-			return nil, nil, ferr
+			return nil, ferr
 		}
 	}
 
@@ -880,7 +880,7 @@ func (r *Reader) find(key []byte, filtered bool, ro *opt.ReadOptions, noValue bo
 		dataBH, n = decodeBlockHandle(index.Value())
 		if n == 0 {
 			r.err = r.newErrCorruptedBH(r.indexBH, "bad data block handle")
-			return nil, nil, r.err
+			return nil, r.err
 		}
 
 		data = r.getDataIter(dataBH, nil, r.verifyChecksum, !ro.GetDontFillCache())
@@ -896,13 +896,15 @@ func (r *Reader) find(key []byte, filtered bool, ro *opt.ReadOptions, noValue bo
 	// Key doesn't use block buffer, no need to copy the buffer.
 	rkey = data.Key()
 	if !noValue {
-		if r.bpool == nil {
-			value = data.Value()
-		} else {
-			// Value does use block buffer, and since the buffer will be
-			// recycled, it need to be copied.
-			value = append([]byte{}, data.Value()...)
-		}
+		value = data.Value()
+
+		//if r.bpool == nil {
+		//	value = data.Value()
+		//} else {
+		//	// Value does use block buffer, and since the buffer will be
+		//	// recycled, it need to be copied.
+		//	value = append([]byte{}, data.Value()...)
+		//}
 	}
 	data.Release()
 	return
@@ -918,8 +920,8 @@ func (r *Reader) find(key []byte, filtered bool, ro *opt.ReadOptions, noValue bo
 // The caller may modify the contents of the returned slice as it is its
 // own copy.
 // It is safe to modify the contents of the argument after Find returns.
-func (r *Reader) Find(key []byte, filtered bool, ro *opt.ReadOptions) (rkey, value []byte, err error) {
-	return r.find(key, filtered, ro, false)
+func (r *Reader) Find(key []byte, filtered bool, ro *opt.ReadOptions, value []byte) (rkey []byte, err error) {
+	return r.find(key, filtered, ro, false, value)
 }
 
 // FindKey finds key that is greater than or equal to the given key.
@@ -931,8 +933,8 @@ func (r *Reader) Find(key []byte, filtered bool, ro *opt.ReadOptions) (rkey, val
 // The caller may modify the contents of the returned slice as it is its
 // own copy.
 // It is safe to modify the contents of the argument after Find returns.
-func (r *Reader) FindKey(key []byte, filtered bool, ro *opt.ReadOptions) (rkey []byte, err error) {
-	rkey, _, err = r.find(key, filtered, ro, true)
+func (r *Reader) FindKey(key []byte, filtered bool, ro *opt.ReadOptions, rkey []byte) (err error) {
+	rkey, err = r.find(key, filtered, ro, true, rkey)
 	return
 }
 
@@ -942,7 +944,7 @@ func (r *Reader) FindKey(key []byte, filtered bool, ro *opt.ReadOptions) (rkey [
 // The caller may modify the contents of the returned slice as it is its
 // own copy.
 // It is safe to modify the contents of the argument after Find returns.
-func (r *Reader) Get(key []byte, ro *opt.ReadOptions) (value []byte, err error) {
+func (r *Reader) Get(key []byte, ro *opt.ReadOptions, value []byte) (err error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -951,7 +953,7 @@ func (r *Reader) Get(key []byte, ro *opt.ReadOptions) (value []byte, err error) 
 		return
 	}
 
-	rkey, value, err := r.find(key, false, ro, false)
+	rkey, err := r.find(key, false, ro, false, value)
 	if err == nil && r.cmp.Compare(rkey, key) != 0 {
 		value = nil
 		err = ErrNotFound

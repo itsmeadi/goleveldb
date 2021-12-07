@@ -99,7 +99,7 @@ func (snap *Snapshot) String() string {
 //
 // The caller should not modify the contents of the returned slice, but
 // it is safe to modify the contents of the argument after Get returns.
-func (snap *Snapshot) Get(key []byte, ro *opt.ReadOptions) (value []byte, err error) {
+func (snap *Snapshot) Get(key []byte, ro *opt.ReadOptions, value []byte) (err error) {
 	snap.mu.RLock()
 	defer snap.mu.RUnlock()
 	if snap.released {
@@ -110,7 +110,7 @@ func (snap *Snapshot) Get(key []byte, ro *opt.ReadOptions) (value []byte, err er
 	if err != nil {
 		return
 	}
-	return snap.db.get(nil, nil, key, snap.elem.seq, ro)
+	return snap.db.get(nil, nil, key, snap.elem.seq, ro, value)
 }
 
 // Has returns true if the DB does contains the given key.

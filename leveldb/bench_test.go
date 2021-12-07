@@ -217,7 +217,7 @@ func (p *dbBench) gets() {
 
 	b.ResetTimer()
 	for i := range p.keys {
-		_, err := db.Get(p.keys[i], p.ro)
+		err := db.Get(p.keys[i], p.ro, value)
 		if err != nil {
 			b.Error("got error: ", err)
 		}

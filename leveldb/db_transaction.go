@@ -37,13 +37,13 @@ type Transaction struct {
 // The returned slice is its own copy, it is safe to modify the contents
 // of the returned slice.
 // It is safe to modify the contents of the argument after Get returns.
-func (tr *Transaction) Get(key []byte, ro *opt.ReadOptions) ([]byte, error) {
+func (tr *Transaction) Get(key []byte, ro *opt.ReadOptions, value []byte) error {
 	tr.lk.RLock()
 	defer tr.lk.RUnlock()
 	if tr.closed {
-		return nil, errTransactionDone
+		return errTransactionDone
 	}
-	return tr.db.get(tr.mem.DB, tr.tables, key, tr.seq, ro)
+	return tr.db.get(tr.mem.DB, tr.tables, key, tr.seq, ro, value)
 }
 
 // Has returns true if the DB does contains the given key.

@@ -17,7 +17,7 @@ import (
 // Reader is the interface that wraps basic Get and NewIterator methods.
 // This interface implemented by both DB and Snapshot.
 type Reader interface {
-	Get(key []byte, ro *opt.ReadOptions) (value []byte, err error)
+	Get(key []byte, ro *opt.ReadOptions, value []byte) (err error)
 	NewIterator(slice *util.Range, ro *opt.ReadOptions) iterator.Iterator
 }
 

@@ -31,7 +31,7 @@ func (t *testingDB) TestDelete(key []byte) error {
 }
 
 func (t *testingDB) TestGet(key []byte) (value []byte, err error) {
-	return t.Get(key, t.ro)
+	return t.Get(key, t.ro, value)
 }
 
 func (t *testingDB) TestHas(key []byte) (ret bool, err error) {
@@ -77,7 +77,7 @@ func (t *testingTransaction) TestDelete(key []byte) error {
 }
 
 func (t *testingTransaction) TestGet(key []byte) (value []byte, err error) {
-	return t.Get(key, t.ro)
+	return t.Get(key, t.ro, value)
 }
 
 func (t *testingTransaction) TestHas(key []byte) (ret bool, err error) {

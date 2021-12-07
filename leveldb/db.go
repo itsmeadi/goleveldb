@@ -760,12 +760,12 @@ func memGet(mdb *memdb.DB, ikey internalKey, icmp *iComparer) (ok bool, mv []byt
 	return
 }
 
-func (db *DB) get(auxm *memdb.DB, auxt tFiles, key []byte, seq uint64, ro *opt.ReadOptions) (value []byte, err error) {
+func (db *DB) get(auxm *memdb.DB, auxt tFiles, key []byte, seq uint64, ro *opt.ReadOptions, value []byte) (err error) {
 	ikey := makeInternalKey(nil, key, seq, keyTypeSeek)
 
 	if auxm != nil {
-		if ok, mv, me := memGet(auxm, ikey, db.s.icmp); ok {
-			return append([]byte{}, mv...), me
+		if ok, _, me := memGet(auxm, ikey, db.s.icmp); ok {
+			return me
 		}
 	}
 
@@ -776,13 +776,14 @@ func (db *DB) get(auxm *memdb.DB, auxt tFiles, key []byte, seq uint64, ro *opt.R
 		}
 		defer m.decref()
 
-		if ok, mv, me := memGet(m.DB, ikey, db.s.icmp); ok {
-			return append([]byte{}, mv...), me
+		if ok, _, me := memGet(m.DB, ikey, db.s.icmp); ok {
+			return me
 		}
+
 	}
 
 	v := db.s.version()
-	value, cSched, err := v.get(auxt, ikey, ro, false)
+	cSched, err := v.get(auxt, ikey, ro, false, value)
 	v.release()
 	if cSched {
 		// Trigger table compaction.
@@ -820,7 +821,7 @@ func (db *DB) has(auxm *memdb.DB, auxt tFiles, key []byte, seq uint64, ro *opt.R
 	}
 
 	v := db.s.version()
-	_, cSched, err := v.get(auxt, ikey, ro, true)
+	cSched, err := v.get(auxt, ikey, ro, true, nil)
 	v.release()
 	if cSched {
 		// Trigger table compaction.
@@ -840,7 +841,7 @@ func (db *DB) has(auxm *memdb.DB, auxt tFiles, key []byte, seq uint64, ro *opt.R
 // The returned slice is its own copy, it is safe to modify the contents
 // of the returned slice.
 // It is safe to modify the contents of the argument after Get returns.
-func (db *DB) Get(key []byte, ro *opt.ReadOptions) (value []byte, err error) {
+func (db *DB) Get(key []byte, ro *opt.ReadOptions, value []byte) (err error) {
 	err = db.ok()
 	if err != nil {
 		return
@@ -848,7 +849,7 @@ func (db *DB) Get(key []byte, ro *opt.ReadOptions) (value []byte, err error) {
 
 	se := db.acquireSnapshot()
 	defer db.releaseSnapshot(se)
-	return db.get(nil, nil, key, se.seq, ro)
+	return db.get(nil, nil, key, se.seq, ro, value)
 }
 
 // Has returns true if the DB does contains the given key.
